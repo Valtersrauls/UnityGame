@@ -7,7 +7,7 @@ public class EnemyController : MonoBehaviour
 {
     private enum AIStatus { Patrol, Follow }
 
-    private const float CloseEnoughWaypointDistance = 0.5f;
+    private const float CloseEnoughWaypointDistance = 1.0f;
 
     [Range(0f, 1f)]
     [SerializeField]
@@ -136,9 +136,13 @@ public class EnemyController : MonoBehaviour
 
         if (distanceToDestination <= CloseEnoughWaypointDistance)
         {
+            Debug.Log("Performing patrol");
             MoveNextWaypoint();
+            Debug.Log("MoveNextWaypoint()");
             UpdateTargetWaypointDestination();
+            Debug.Log("UpdateTargetWaypointDestination()");
             UpdateNavMeshAgentDestinationPosition();
+            Debug.Log("UpdateNavMeshAgentDestinationPosition()");
         }
     }
 
@@ -185,12 +189,16 @@ public class EnemyController : MonoBehaviour
 
     private void MoveNextWaypoint()
     {
-        if (++currentWaypointIndex >= _waypoints.Length) currentWaypointIndex = 0;
+        if (++currentWaypointIndex >= _waypoints.Length)
+        {
+            currentWaypointIndex = 0;
+            Debug.Log("Waypoints reseted");
+        }
     }
-
     private void UpdateTargetWaypointDestination()
     {
         Waypoint waypoint = _waypoints[currentWaypointIndex];
+        Debug.Log("Waypoint updated");
         destinationPosition = waypoint.transform.position;
     }
     #endregion
