@@ -16,7 +16,7 @@ public class Finish : MonoBehaviour
     {
         if (other.tag == "Player")
         {
-            finishText.text = "Level completed!";
+            FindObjectOfType<GameManager>().EndGame(true);
         }
     }
 }

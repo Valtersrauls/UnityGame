@@ -10,8 +10,7 @@ public class KillPlayer : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (other.tag == "Enemy") {
-            Destroy(gameObject);
-            deathText.text = "You died!";
+            FindObjectOfType<GameManager>().EndGame(false);
         }
     }
 }

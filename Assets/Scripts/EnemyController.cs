@@ -5,7 +5,9 @@ using UnityEngine.AI;
 
 public class EnemyController : MonoBehaviour
 {
-    private enum AIStatus { Patrol, Follow }
+    Animator animator;
+
+    private enum AIStatus { Patrol, Follow, Wait }
 
     private const float CloseEnoughWaypointDistance = 1.0f;
 
@@ -19,7 +21,7 @@ public class EnemyController : MonoBehaviour
 
     [Range(1f, 360f)]
     [SerializeField]
-    private float fieldOfViewAnglePatrol = 30f;
+    private float fieldOfViewAnglePatrol = 60f;
 
     [Range(1f, 360f)]
     [SerializeField]
@@ -28,6 +30,10 @@ public class EnemyController : MonoBehaviour
     [Range(0f, 30f)]
     [SerializeField]
     private float loseInterestTime = 5f;
+
+    [Range(0f, 30f)]
+    [SerializeField]
+    private float patrolWaitTime = 5f;
 
     [SerializeField]
     private Waypoint[] _waypoints;
@@ -41,6 +47,7 @@ public class EnemyController : MonoBehaviour
     private Vector3 destinationPosition;
     private float distanceToDestination;
     private float accumulatedLoseInterestRate = 0f;
+    private float accumulatedWaitTime = 0f;
 
     private float FieldOfViewAngle
     {
@@ -52,6 +59,8 @@ public class EnemyController : MonoBehaviour
                     return fieldOfViewAngleFollow;
                 case AIStatus.Patrol:
                     return fieldOfViewAnglePatrol;
+                case AIStatus.Wait:
+                    return fieldOfViewAngleFollow;
                 default:
                     throw new System.Exception("Unsupported AiStatus: " + aiStatus);
             }
@@ -66,6 +75,8 @@ public class EnemyController : MonoBehaviour
 
         UpdateTargetWaypointDestination();
         UpdateNavMeshAgentDestinationPosition();
+
+        animator = GetComponent<Animator>();
     }
 
     private void Update()
@@ -75,10 +86,16 @@ public class EnemyController : MonoBehaviour
         switch (aiStatus)
         {
             case AIStatus.Patrol:
+                animator.SetBool("walking", true);
                 PerformPatrol();
                 break;
             case AIStatus.Follow:
+                animator.SetBool("walking", true);
                 PerformFollow();
+                break;
+            case AIStatus.Wait:
+                animator.SetBool("walking", false);
+                PerformWait();
                 break;
         }
 
@@ -123,7 +140,7 @@ public class EnemyController : MonoBehaviour
             if (closeEnoughToDestination)
             {
                 accumulatedLoseInterestRate += Time.deltaTime;
-                if (accumulatedLoseInterestRate >= loseInterestTime) ResumePatrolling();
+                if (accumulatedLoseInterestRate >= loseInterestTime) ResumePatrolling(true);
             }
         }
     }
@@ -136,13 +153,28 @@ public class EnemyController : MonoBehaviour
 
         if (distanceToDestination <= CloseEnoughWaypointDistance)
         {
-            Debug.Log("Performing patrol");
+            StartWaiting();
+            //MoveNextWaypoint();
+            //UpdateTargetWaypointDestination();
+            //UpdateNavMeshAgentDestinationPosition();
+        }
+    }
+
+    private void PerformWait()
+    {
+        accumulatedWaitTime += Time.deltaTime;
+        if (CanSeePlayer())
+        {
+            accumulatedWaitTime = 0f;
+            StartFollowing();
+        }
+        if (accumulatedWaitTime >= patrolWaitTime)
+        {
+            accumulatedWaitTime = 0f;
             MoveNextWaypoint();
-            Debug.Log("MoveNextWaypoint()");
             UpdateTargetWaypointDestination();
-            Debug.Log("UpdateTargetWaypointDestination()");
             UpdateNavMeshAgentDestinationPosition();
-            Debug.Log("UpdateNavMeshAgentDestinationPosition()");
+            ResumePatrolling(false);
         }
     }
 
@@ -152,12 +184,21 @@ public class EnemyController : MonoBehaviour
         aiStatus = AIStatus.Follow;
     }
 
-    private void ResumePatrolling()
+    private void ResumePatrolling(bool wasFollowing)
     {
         Debug.Log("AI lost interest - resuming patrol");
         aiStatus = AIStatus.Patrol;
-        FindClosestWaypoint();
-        UpdateNavMeshAgentDestinationPosition();
+        if (wasFollowing)
+        {
+            FindClosestWaypoint();
+            UpdateNavMeshAgentDestinationPosition();
+        }  
+    }
+
+    private void StartWaiting()
+    {
+        Debug.Log("AI is waiting");
+        aiStatus = AIStatus.Wait;
     }
 
     private void UpdateNavMeshAgentDestinationPosition()
